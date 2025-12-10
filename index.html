@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>抽奖页面</title>
+    <link rel="stylesheet" href="style.css?v=20241211">
+</head>
+<body>
+    <div class="main-flex-layout">
+        <div class="prize-left-panel">
+            <div class="prize-rounds-bar" id="prizeRoundsBar"></div>
+            <div class="prize-image-area" id="prizeImageArea"></div>
+        </div>
+        <div class="main-content">
+            <h1 class="title">抽奖页面</h1>
+            <div class="mode-selector">
+                <label class="mode-option">
+                    <input type="radio" name="drawMode" value="single" checked>
+                    <span>单次抽取</span>
+                </label>
+                <label class="mode-option">
+                    <input type="radio" name="drawMode" value="batch">
+                    <span>批量抽取</span>
+                </label>
+            </div>
+            <div class="name-display-container" id="nameDisplayContainer">
+                <div class="name-display" id="nameDisplay">--</div>
+            </div>
+            <div class="button-group">
+                <button id="startBtn">开始</button>
+                <button id="pauseBtn">暂停</button>
+                <button id="editBtn">编辑名单</button>
+                <button id="configBtn">配置奖品</button>
+                <button id="exportBtn">导出名单</button>
+            </div>
+            <div class="result-list" id="resultList"></div>
+        </div>
+    </div>
+    <!-- 编辑名单弹窗 -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <h2>编辑名单</h2>
+            <textarea id="nameTextarea" rows="15"></textarea>
+            <div class="modal-buttons">
+                <button id="saveNamesBtn">保存</button>
+                <button id="closeModalBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+    <!-- 配置奖品弹窗 -->
+    <div class="modal" id="configModal">
+        <div class="modal-content config-modal-content">
+            <h2>配置奖品</h2>
+            <div id="prizeConfigList" class="prize-config-list"></div>
+            <div class="modal-buttons">
+                <button id="addPrizeBtn">添加奖品</button>
+                <button id="saveConfigBtn">保存配置</button>
+                <button id="closeConfigBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+    <script src="main.js?v=20241213"></script>
+</body>
+</html> 
