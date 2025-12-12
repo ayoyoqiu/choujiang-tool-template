@@ -8,7 +8,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>抽奖页面</title>
-    <link rel="stylesheet" href="style.css?v=20241211">
+    <link rel="stylesheet" href="style.css?v=20241219">
 </head>
 <body>
     <div class="main-flex-layout">
@@ -29,22 +29,30 @@
                 </label>
             </div>
             <div class="name-display-container" id="nameDisplayContainer">
-                <div class="name-display" id="nameDisplay">--</div>
+                <div class="name-display" id="nameDisplay" style="color: #999;">中奖区</div>
             </div>
             <div class="button-group">
                 <button id="startBtn">开始</button>
                 <button id="pauseBtn">暂停</button>
                 <button id="editBtn">编辑名单</button>
                 <button id="configBtn">配置奖品</button>
+                <button id="backgroundBtn">背景配置</button>
                 <button id="exportBtn">导出名单</button>
             </div>
             <div class="result-list" id="resultList"></div>
         </div>
     </div>
+    <!-- 浏览次数显示 -->
+    <div class="click-counter" id="clickCounter">浏览次数: 0</div>
+    <!-- 作者链接 -->
+    <div class="author-link">
+        <a href="https://ayoyoqiu.github.io/yoyo/" target="_blank">@ yoyo</a>
+    </div>
     <!-- 编辑名单弹窗 -->
     <div class="modal" id="editModal">
         <div class="modal-content">
             <h2>编辑名单</h2>
+            <div class="edit-tip">注意：只配置1次，不可重复配置名单</div>
             <textarea id="nameTextarea" rows="15"></textarea>
             <div class="modal-buttons">
                 <button id="saveNamesBtn">保存</button>
@@ -64,6 +72,27 @@
             </div>
         </div>
     </div>
-    <script src="main.js?v=20241213"></script>
+    <!-- 背景配置弹窗 -->
+    <div class="modal" id="backgroundModal">
+        <div class="modal-content background-modal-content">
+            <h2>背景配置</h2>
+            <div class="background-config-section">
+                <div class="config-field">
+                    <label>背景图片URL（建议图片大小 <6MB，尺寸 1920*1079）：</label>
+                    <input type="text" id="backgroundUrlInput" placeholder="https://example.com/background.jpg">
+                    <button id="resetBackgroundBtn" class="reset-btn">恢复默认</button>
+                </div>
+                <div class="config-field">
+                    <label>背景预览：</label>
+                    <img id="backgroundPreviewImg" src="" alt="背景预览" class="background-preview-img" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'120\'%3E%3Crect fill=\'%23ddd\' width=\'200\' height=\'120\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3E无图片%3C/text%3E%3C/svg%3E'">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="saveBackgroundBtn">保存背景</button>
+                <button id="closeBackgroundBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+    <script src="main.js?v=20241218"></script>
 </body>
 </html> 

@@ -1,12 +1,14 @@
 // 默认名单
 const defaultNames = [
-  '北海马仕华','成都何雅莉','成都鲜娟','成都张燕','成都王群','佛山陈洁纯','福州谢莹','广州张芳','广州李颖','杭州孔晓贺','杭州杨毛艳','杭州龚新然','杭州梁美英','合肥丁月','合肥王柏森','合肥李晓周','淮安孙雪玉','济南钟金萍','济南石烁','昆明毛文琳','兰州张诗卓','柳州黄柳盼','绵阳赖文文','南京李玉洁','南京杨铁君','南宁王敏','南通李晶','宁波王佳','宁波潘仁义','青岛李文雯','厦门林诗彤','绍兴曲丽娟','沈阳韦诗怡','苏州张丽婷','太原张洁丽','太原王腾','天津刘璐','无锡余亮亮','武汉李慧','西安马凌雅','徐州徐子迪','徐州 冯珍','盐城杨磊','盐城徐良宏','宜昌易继莲','银川朱芮青','长沙张茜','郑州陈清清','郑州杨帅','珠海杨娟','江门黄楚君','北京孙蕊','北京李婉婷','北京张旭'
+  '测试1', '测试2', '测试3', '测试4', '测试5', '测试6', '测试7', '测试8', '测试9', '测试10'
 ];
 
 const STORAGE_KEY = '抽奖名单存储v1';
 const RESULT_KEY = '抽奖结果存储v1';
 const MODE_KEY = '抽取模式存储v1';
 const PRIZE_CONFIG_KEY = '奖品配置存储v1';
+const BACKGROUND_KEY = '背景配置存储v1';
+const CLICK_COUNT_KEY = '点击次数存储v1';
 
 let names = [];
 let resultList = [];
@@ -17,6 +19,9 @@ let running = false;
 let batchRunning = false; // 批量抽取运行状态
 let drawMode = 'single'; // 'single' 或 'batch'
 let batchNameDisplays = []; // 批量抽取时的多个名字显示元素
+
+// 默认背景图片
+const defaultBackground = 'https://www.img520.com/Q82HvE.png';
 
 // 默认奖品配置
 const defaultPrizeRounds = [
@@ -62,6 +67,14 @@ const modeRadios = document.querySelectorAll('input[name="drawMode"]');
 const prizeConfigList = document.getElementById('prizeConfigList');
 const addPrizeBtn = document.getElementById('addPrizeBtn');
 const saveConfigBtn = document.getElementById('saveConfigBtn');
+const backgroundBtn = document.getElementById('backgroundBtn');
+const backgroundModal = document.getElementById('backgroundModal');
+const backgroundUrlInput = document.getElementById('backgroundUrlInput');
+const backgroundPreviewImg = document.getElementById('backgroundPreviewImg');
+const resetBackgroundBtn = document.getElementById('resetBackgroundBtn');
+const saveBackgroundBtn = document.getElementById('saveBackgroundBtn');
+const closeBackgroundBtn = document.getElementById('closeBackgroundBtn');
+const clickCounter = document.getElementById('clickCounter');
 
 function loadNames() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -102,6 +115,39 @@ function savePrizeConfig() {
   saveResults();
 }
 
+function loadBackground() {
+  const saved = localStorage.getItem(BACKGROUND_KEY);
+  const bgUrl = saved || defaultBackground;
+  applyBackground(bgUrl);
+  return bgUrl;
+}
+
+function saveBackground(url) {
+  if (url && url.trim() !== '') {
+    localStorage.setItem(BACKGROUND_KEY, url.trim());
+  } else {
+    localStorage.removeItem(BACKGROUND_KEY);
+  }
+  applyBackground(url || defaultBackground);
+}
+
+function applyBackground(url) {
+  const body = document.body;
+  const mainLayout = document.querySelector('.main-flex-layout');
+  if (body && mainLayout) {
+    body.style.backgroundImage = `url('${url}')`;
+    body.style.backgroundRepeat = 'no-repeat';
+    body.style.backgroundPosition = 'center center';
+    body.style.backgroundAttachment = 'fixed';
+    body.style.backgroundSize = 'cover';
+    mainLayout.style.backgroundImage = `url('${url}')`;
+    mainLayout.style.backgroundRepeat = 'no-repeat';
+    mainLayout.style.backgroundPosition = 'center center';
+    mainLayout.style.backgroundAttachment = 'fixed';
+    mainLayout.style.backgroundSize = 'cover';
+  }
+}
+
 function loadResults() {
   const saved = localStorage.getItem(RESULT_KEY);
   if (saved) {
@@ -138,6 +184,29 @@ function loadMode() {
     });
   }
   updateButtonText();
+}
+
+function loadClickCount() {
+  const saved = localStorage.getItem(CLICK_COUNT_KEY);
+  return saved ? parseInt(saved, 10) : 0;
+}
+
+function saveClickCount(count) {
+  localStorage.setItem(CLICK_COUNT_KEY, count.toString());
+}
+
+function updateClickCounter() {
+  const count = loadClickCount();
+  if (clickCounter) {
+    clickCounter.textContent = `浏览次数: ${count}`;
+  }
+}
+
+function incrementClickCount() {
+  const currentCount = loadClickCount();
+  const newCount = currentCount + 1;
+  saveClickCount(newCount);
+  updateClickCounter();
 }
 
 function saveMode() {
@@ -197,9 +266,12 @@ function resetNameDisplay() {
   batchNameDisplays = [];
   
   // 恢复单次抽取的显示
-  nameDisplayContainer.innerHTML = '<div class="name-display" id="nameDisplay">--</div>';
+  nameDisplayContainer.innerHTML = '<div class="name-display" id="nameDisplay">中奖区</div>';
   const newNameDisplay = document.getElementById('nameDisplay');
   nameDisplayContainer.classList.remove('batch-mode');
+  if (newNameDisplay && newNameDisplay.textContent === '中奖区') {
+    newNameDisplay.style.color = '#999';
+  }
   return newNameDisplay;
 }
 
@@ -224,6 +296,7 @@ function startSingleRoll() {
     }
     const idx = Math.floor(Math.random() * pool.length);
     nameDisplayEl.textContent = pool[idx];
+    nameDisplayEl.style.color = '#fff';
   }, 5);
 }
 
@@ -260,12 +333,23 @@ function startBatchDraw() {
   // 清除之前的显示，创建多个名字显示元素
   nameDisplayContainer.innerHTML = '';
   nameDisplayContainer.classList.add('batch-mode');
+  
+  // 根据数量动态调整容器样式
+  if (needToDraw > 10) {
+    nameDisplayContainer.style.maxWidth = '100%';
+  } else if (needToDraw > 5) {
+    nameDisplayContainer.style.maxWidth = '95%';
+  } else {
+    nameDisplayContainer.style.maxWidth = '90%';
+  }
+  
   batchNameDisplays = [];
   
   for (let i = 0; i < needToDraw; i++) {
     const nameEl = document.createElement('div');
     nameEl.className = 'name-display';
-    nameEl.textContent = '--';
+    nameEl.textContent = '中奖区';
+    nameEl.style.color = '#999';
     nameEl.dataset.index = i;
     nameDisplayContainer.appendChild(nameEl);
     batchNameDisplays.push(nameEl);
@@ -341,7 +425,7 @@ function pauseRoll() {
       // 收集所有正在显示的名字（不重复）
       batchNameDisplays.forEach(nameEl => {
         const name = nameEl.textContent;
-        if (name && name !== '--' && !usedNames.has(name) && pool.includes(name)) {
+        if (name && name !== '--' && name !== '中奖区' && !usedNames.has(name) && pool.includes(name)) {
           winners.push(name);
           usedNames.add(name);
         }
@@ -429,8 +513,9 @@ function saveEditedNames() {
   resetNameDisplay();
   const nameDisplayEl = document.getElementById('nameDisplay');
   if (nameDisplayEl) {
-    nameDisplayEl.textContent = '--';
+    nameDisplayEl.textContent = '中奖区';
     nameDisplayEl.classList.remove('paused');
+    nameDisplayEl.style.color = '#999';
   }
 }
 
@@ -460,9 +545,9 @@ function nextRound() {
     saveResults();
     updateResultList();
     updatePrizeImage();
-    nameDisplay.textContent = '--';
+    nameDisplay.textContent = '中奖区';
     nameDisplay.classList.remove('paused');
-    nameDisplay.style.color = '#fff';
+    nameDisplay.style.color = '#999';
   }
 }
 
@@ -501,9 +586,9 @@ function renderPrizeRoundsBar() {
         resetNameDisplay();
         const nameDisplayEl = document.getElementById('nameDisplay');
         if (nameDisplayEl) {
-          nameDisplayEl.textContent = '--';
+          nameDisplayEl.textContent = '中奖区';
           nameDisplayEl.classList.remove('paused');
-          nameDisplayEl.style.color = '#fff';
+          nameDisplayEl.style.color = '#999';
         }
       }
     };
@@ -735,8 +820,9 @@ function saveConfigAndUpdate() {
   resetNameDisplay();
   const nameDisplayEl = document.getElementById('nameDisplay');
   if (nameDisplayEl) {
-    nameDisplayEl.textContent = '--';
+    nameDisplayEl.textContent = '中奖区';
     nameDisplayEl.classList.remove('paused');
+    nameDisplayEl.style.color = '#999';
   }
   
   closeConfigModal();
@@ -749,18 +835,26 @@ function init() {
   loadNames();
   loadResults(); // 再加载结果（依赖prizeRounds）
   loadMode();
+  loadBackground(); // 加载背景配置
   updateResultList();
   
   // 初始化名字显示
   resetNameDisplay();
   const nameDisplayEl = document.getElementById('nameDisplay');
   if (nameDisplayEl) {
-    nameDisplayEl.textContent = '--';
+    nameDisplayEl.textContent = '中奖区';
     nameDisplayEl.classList.remove('paused');
+    nameDisplayEl.style.color = '#999';
   }
   
   updatePrizeImage();
   renderPrizeRoundsBar();
+  
+  // 初始化点击计数器
+  updateClickCounter();
+  
+  // 添加点击事件监听器
+  document.addEventListener('click', incrementClickCount);
   
   // 绑定模式切换事件
   modeRadios.forEach(radio => {
@@ -782,9 +876,9 @@ function init() {
         resetNameDisplay();
         const nameDisplayEl = document.getElementById('nameDisplay');
         if (nameDisplayEl) {
-          nameDisplayEl.textContent = '--';
+          nameDisplayEl.textContent = '中奖区';
           nameDisplayEl.classList.remove('paused');
-          nameDisplayEl.style.color = '#fff';
+          nameDisplayEl.style.color = '#999';
         }
       }
     });
@@ -802,6 +896,75 @@ saveConfigBtn.onclick = saveConfigAndUpdate;
 addPrizeBtn.onclick = addPrizeItem;
 exportBtn.onclick = exportWinners;
 
+// 背景配置相关函数
+function openBackgroundModal() {
+  // 加载当前背景配置
+  const currentBg = localStorage.getItem(BACKGROUND_KEY) || defaultBackground;
+  if (backgroundUrlInput) {
+    backgroundUrlInput.value = currentBg;
+  }
+  if (backgroundPreviewImg) {
+    backgroundPreviewImg.src = currentBg;
+  }
+  
+  // 绑定实时预览事件
+  if (backgroundUrlInput) {
+    backgroundUrlInput.oninput = function() {
+      const url = this.value.trim();
+      if (backgroundPreviewImg) {
+        if (url) {
+          backgroundPreviewImg.src = url;
+        } else {
+          backgroundPreviewImg.src = defaultBackground;
+        }
+      }
+    };
+  }
+  
+  // 绑定重置按钮事件
+  if (resetBackgroundBtn) {
+    resetBackgroundBtn.onclick = function() {
+      if (backgroundUrlInput) {
+        backgroundUrlInput.value = defaultBackground;
+      }
+      if (backgroundPreviewImg) {
+        backgroundPreviewImg.src = defaultBackground;
+      }
+    };
+  }
+  
+  backgroundModal.classList.add('show');
+}
+
+function closeBackgroundModal() {
+  backgroundModal.classList.remove('show');
+}
+
+function saveBackgroundConfig() {
+  if (!backgroundUrlInput) {
+    alert('无法获取背景配置输入框！');
+    return;
+  }
+  
+  const bgUrl = backgroundUrlInput.value.trim();
+  if (bgUrl) {
+    // 验证URL格式
+    try {
+      new URL(bgUrl);
+      saveBackground(bgUrl);
+      closeBackgroundModal();
+      alert('背景配置已保存！');
+    } catch (e) {
+      alert('背景图片URL格式不正确，请输入有效的URL地址！');
+      return;
+    }
+  } else {
+    saveBackground(defaultBackground);
+    closeBackgroundModal();
+    alert('背景已恢复为默认！');
+  }
+}
+
 // 点击弹窗外关闭弹窗
 editModal.onclick = function(e) {
   if (e.target === editModal) closeEditModal();
@@ -809,6 +972,20 @@ editModal.onclick = function(e) {
 configModal.onclick = function(e) {
   if (e.target === configModal) closeConfigModal();
 };
+backgroundModal.onclick = function(e) {
+  if (e.target === backgroundModal) closeBackgroundModal();
+};
+
+// 绑定背景配置按钮事件
+if (backgroundBtn) {
+  backgroundBtn.onclick = openBackgroundModal;
+}
+if (saveBackgroundBtn) {
+  saveBackgroundBtn.onclick = saveBackgroundConfig;
+}
+if (closeBackgroundBtn) {
+  closeBackgroundBtn.onclick = closeBackgroundModal;
+}
 
 window.onload = init;
 
