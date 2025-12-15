@@ -850,11 +850,8 @@ function init() {
   updatePrizeImage();
   renderPrizeRoundsBar();
   
-  // 初始化点击计数器
-  updateClickCounter();
-  
-  // 添加点击事件监听器
-  document.addEventListener('click', incrementClickCount);
+  // 初始化浏览次数计数器（页面加载时记录一次访问）
+  incrementClickCount();
   
   // 绑定模式切换事件
   modeRadios.forEach(radio => {
