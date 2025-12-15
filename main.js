@@ -1,6 +1,7 @@
 // 默认名单
 const defaultNames = [
-  '测试1', '测试2', '测试3', '测试4', '测试5', '测试6', '测试7', '测试8', '测试9', '测试10'
+  '测试1', '测试2', '测试3', '测试4', '测试5', '测试6', '测试7', '测试8', '测试9', '测试10',
+  '测试11', '测试12', '测试13', '测试14', '测试15'
 ];
 
 const STORAGE_KEY = '抽奖名单存储v1';
@@ -833,7 +834,17 @@ function saveConfigAndUpdate() {
 function init() {
   loadPrizeConfig(); // 先加载奖品配置
   loadNames();
-  loadResults(); // 再加载结果（依赖prizeRounds）
+  
+  // 如果是首次使用（使用默认名单），清空所有抽奖结果，让奖品处于未抽取状态
+  const savedNames = localStorage.getItem(STORAGE_KEY);
+  if (!savedNames) {
+    // 首次使用，清空所有抽奖结果
+    roundWinners = prizeRounds.map(() => []);
+    saveResults();
+  } else {
+    loadResults(); // 再加载结果（依赖prizeRounds）
+  }
+  
   loadMode();
   loadBackground(); // 加载背景配置
   updateResultList();
