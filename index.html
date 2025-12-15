@@ -37,6 +37,7 @@
                 <button id="editBtn">编辑名单</button>
                 <button id="configBtn">配置奖品</button>
                 <button id="backgroundBtn">背景配置</button>
+                <button id="musicBtn">音乐配置</button>
                 <button id="exportBtn">导出名单</button>
             </div>
             <div class="result-list" id="resultList"></div>
@@ -93,6 +94,31 @@
             </div>
         </div>
     </div>
-    <script src="main.js?v=20241218"></script>
+    <!-- 音乐配置弹窗 -->
+    <div class="modal" id="musicModal">
+        <div class="modal-content music-modal-content">
+            <h2>音乐配置</h2>
+            <div class="music-config-section">
+                <div class="config-field">
+                    <label>上传音频文件（支持 MP3、WAV、OGG 等格式，建议 < 10MB）：</label>
+                    <input type="file" id="musicFileInput" accept="audio/*">
+                    <button id="deleteMusicBtn" class="delete-music-btn" style="display:none;">删除音乐</button>
+                </div>
+                <div class="config-field" id="currentMusicInfo" style="display:none;">
+                    <label>当前音乐：</label>
+                    <div class="music-info">
+                        <span id="musicFileName"></span>
+                        <button id="previewMusicBtn" class="preview-btn">试听</button>
+                    </div>
+                </div>
+                <audio id="musicPreview" controls style="display:none; width:100%; margin-top:10px;"></audio>
+            </div>
+            <div class="modal-buttons">
+                <button id="saveMusicBtn">保存</button>
+                <button id="closeMusicBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+    <script src="main.js?v=20241219"></script>
 </body>
 </html> 

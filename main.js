@@ -10,6 +10,7 @@ const MODE_KEY = '抽取模式存储v1';
 const PRIZE_CONFIG_KEY = '奖品配置存储v1';
 const BACKGROUND_KEY = '背景配置存储v1';
 const CLICK_COUNT_KEY = '点击次数存储v1';
+const MUSIC_CONFIG_KEY = '音乐配置存储v1';
 
 let names = [];
 let resultList = [];
@@ -20,6 +21,9 @@ let running = false;
 let batchRunning = false; // 批量抽取运行状态
 let drawMode = 'single'; // 'single' 或 'batch'
 let batchNameDisplays = []; // 批量抽取时的多个名字显示元素
+let backgroundMusic = null; // 背景音乐Audio对象
+let musicData = null; // 音乐数据（base64）
+let musicFileNameStr = ''; // 音乐文件名
 
 // 默认背景图片
 const defaultBackground = 'https://www.img520.com/Q82HvE.png';
@@ -76,6 +80,16 @@ const resetBackgroundBtn = document.getElementById('resetBackgroundBtn');
 const saveBackgroundBtn = document.getElementById('saveBackgroundBtn');
 const closeBackgroundBtn = document.getElementById('closeBackgroundBtn');
 const clickCounter = document.getElementById('clickCounter');
+const musicBtn = document.getElementById('musicBtn');
+const musicModal = document.getElementById('musicModal');
+const musicFileInput = document.getElementById('musicFileInput');
+const deleteMusicBtn = document.getElementById('deleteMusicBtn');
+const saveMusicBtn = document.getElementById('saveMusicBtn');
+const closeMusicBtn = document.getElementById('closeMusicBtn');
+const currentMusicInfo = document.getElementById('currentMusicInfo');
+const musicFileName = document.getElementById('musicFileName');
+const previewMusicBtn = document.getElementById('previewMusicBtn');
+const musicPreview = document.getElementById('musicPreview');
 
 function loadNames() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -210,6 +224,250 @@ function incrementClickCount() {
   updateClickCounter();
 }
 
+// 音乐配置相关函数
+function loadMusic() {
+  const saved = localStorage.getItem(MUSIC_CONFIG_KEY);
+  if (saved) {
+    try {
+      const musicConfig = JSON.parse(saved);
+      musicData = musicConfig.data;
+      musicFileNameStr = musicConfig.fileName || '未命名';
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  return false;
+}
+
+function saveMusic(data, fileName) {
+  const musicConfig = {
+    data: data,
+    fileName: fileName
+  };
+  localStorage.setItem(MUSIC_CONFIG_KEY, JSON.stringify(musicConfig));
+  musicData = data;
+  musicFileNameStr = fileName;
+}
+
+function deleteMusic() {
+  localStorage.removeItem(MUSIC_CONFIG_KEY);
+  musicData = null;
+  musicFileNameStr = '';
+  if (backgroundMusic) {
+    backgroundMusic.pause();
+    backgroundMusic = null;
+  }
+}
+
+function playMusic() {
+  if (!musicData) return;
+  
+  // 如果音乐正在播放，先停止
+  if (backgroundMusic) {
+    stopMusic();
+  }
+  
+  // 创建新的Audio对象
+  backgroundMusic = new Audio(musicData);
+  backgroundMusic.loop = true; // 循环播放
+  backgroundMusic.volume = 0.5; // 音量50%
+  
+  // 播放音乐
+  backgroundMusic.play().catch(e => {
+    console.log('音乐播放失败:', e);
+    // 浏览器可能阻止自动播放，这是正常的
+  });
+}
+
+function stopMusic() {
+  if (backgroundMusic) {
+    backgroundMusic.pause();
+    backgroundMusic.currentTime = 0; // 重置到开头
+  }
+}
+
+function openMusicModal() {
+  if (!musicModal) {
+    console.error('音乐配置弹窗元素未找到');
+    return;
+  }
+  
+  // 加载当前音乐配置
+  if (loadMusic()) {
+    if (currentMusicInfo) currentMusicInfo.style.display = 'block';
+    if (musicFileName) musicFileName.textContent = musicFileNameStr || '未命名';
+    if (deleteMusicBtn) deleteMusicBtn.style.display = 'inline-block';
+    // 设置预览
+    if (musicData && musicPreview) {
+      musicPreview.src = musicData;
+      musicPreview.style.display = 'block';
+    }
+  } else {
+    if (currentMusicInfo) currentMusicInfo.style.display = 'none';
+    if (deleteMusicBtn) deleteMusicBtn.style.display = 'none';
+  }
+  
+  if (musicFileInput) musicFileInput.value = ''; // 清空文件选择
+  
+  musicModal.classList.add('show');
+}
+
+function closeMusicModal() {
+  musicModal.classList.remove('show');
+  // 停止预览
+  if (musicPreview) {
+    musicPreview.pause();
+    musicPreview.src = '';
+  }
+}
+
+// 检测 localStorage 可用空间（估算）
+function getLocalStorageAvailableSpace() {
+  try {
+    // localStorage 通常限制为 5-10MB，但不同浏览器可能不同
+    // 这里使用一个保守的估算值：5MB
+    const estimatedLimit = 5 * 1024 * 1024; // 5MB
+    
+    // 计算已使用的空间
+    let used = 0;
+    for (let key in localStorage) {
+      if (localStorage.hasOwnProperty(key)) {
+        used += localStorage[key].length + key.length;
+      }
+    }
+    
+    // base64 编码会增加约 33% 的大小
+    // 所以原始文件大小应该控制在可用空间的 75% 左右
+    const available = estimatedLimit - used;
+    const maxFileSize = Math.floor(available * 0.75); // 保守估计，留出安全余量
+    
+    return {
+      estimatedLimit: estimatedLimit,
+      used: used,
+      available: available,
+      maxFileSize: maxFileSize,
+      maxFileSizeMB: (maxFileSize / (1024 * 1024)).toFixed(2)
+    };
+  } catch (e) {
+    // 如果检测失败，返回保守的默认值
+    return {
+      estimatedLimit: 5 * 1024 * 1024,
+      used: 0,
+      available: 5 * 1024 * 1024,
+      maxFileSize: 3 * 1024 * 1024, // 3MB 作为安全值
+      maxFileSizeMB: '3.00'
+    };
+  }
+}
+
+function handleMusicUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // 检查文件类型
+  if (!file.type.startsWith('audio/')) {
+    alert('请上传音频文件！');
+    event.target.value = '';
+    return;
+  }
+  
+  // 检测可用存储空间
+  const storageInfo = getLocalStorageAvailableSpace();
+  const base64Size = Math.ceil(file.size * 1.33); // base64 编码后的大小（约增加33%）
+  
+  // 检查文件大小（10MB限制）
+  if (file.size > 10 * 1024 * 1024) {
+    alert('音频文件大小不能超过 10MB！');
+    event.target.value = '';
+    return;
+  }
+  
+  // 检查 base64 编码后的实际大小是否超过可用空间
+  if (base64Size > storageInfo.available) {
+    alert(`文件太大！\n\n` +
+          `文件原始大小：${(file.size / (1024 * 1024)).toFixed(2)} MB\n` +
+          `编码后大小（估算）：${(base64Size / (1024 * 1024)).toFixed(2)} MB\n` +
+          `可用存储空间：${storageInfo.maxFileSizeMB} MB\n\n` +
+          `建议使用小于 ${storageInfo.maxFileSizeMB} MB 的音频文件。`);
+    event.target.value = '';
+    return;
+  }
+  
+  // 如果文件较大，给出提示
+  if (file.size > 3 * 1024 * 1024) { // 大于 3MB
+    const confirmMsg = `文件大小：${(file.size / (1024 * 1024)).toFixed(2)} MB\n` +
+                       `编码后大小（估算）：${(base64Size / (1024 * 1024)).toFixed(2)} MB\n` +
+                       `可用空间：${storageInfo.maxFileSizeMB} MB\n\n` +
+                       `注意：localStorage 存储限制约为 5-10MB，大文件可能导致存储失败。\n` +
+                       `是否继续上传？`;
+    if (!confirm(confirmMsg)) {
+      event.target.value = '';
+      return;
+    }
+  }
+  
+  // 读取文件为base64
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64Data = e.target.result;
+    
+    // 尝试存储，如果失败则提示
+    try {
+      // 先测试存储（不实际保存）
+      const testKey = '__storage_test__';
+      const testData = base64Data.substring(0, 1000); // 只测试一小部分
+      localStorage.setItem(testKey, testData);
+      localStorage.removeItem(testKey);
+      
+      // 显示文件信息
+      currentMusicInfo.style.display = 'block';
+      musicFileName.textContent = file.name;
+      deleteMusicBtn.style.display = 'inline-block';
+      
+      // 设置预览
+      musicPreview.src = base64Data;
+      musicPreview.style.display = 'block';
+    } catch (error) {
+      alert('存储空间不足！\n\n' +
+            'localStorage 已满或文件太大，无法存储。\n' +
+            '建议：\n' +
+            '1. 删除其他不必要的数据\n' +
+            '2. 使用更小的音频文件（建议 < 3MB）\n' +
+            '3. 压缩音频文件');
+      event.target.value = '';
+    }
+  };
+  reader.onerror = function() {
+    alert('文件读取失败，请重试！');
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveMusicConfig() {
+  if (!musicFileInput.files[0] && !musicData) {
+    alert('请先上传音频文件！');
+    return;
+  }
+  
+  // 如果有新上传的文件
+  if (musicFileInput.files[0]) {
+    const file = musicFileInput.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const base64Data = e.target.result;
+      saveMusic(base64Data, file.name);
+      closeMusicModal();
+      alert('音乐配置已保存！');
+    };
+    reader.readAsDataURL(file);
+  } else {
+    // 使用已有的音乐
+    closeMusicModal();
+    alert('音乐配置已保存！');
+  }
+}
+
 function saveMode() {
   localStorage.setItem(MODE_KEY, drawMode);
 }
@@ -248,6 +506,9 @@ function startRoll() {
     nameDisplay.textContent = '名单已抽完';
     return;
   }
+  
+  // 播放背景音乐
+  playMusic();
   
   // 根据模式执行不同逻辑
   if (drawMode === 'batch') {
@@ -293,6 +554,7 @@ function startSingleRoll() {
       clearInterval(timer);
       nameDisplayEl.textContent = '名单已抽完';
       running = false;
+      stopMusic(); // 停止背景音乐
       return;
     }
     const idx = Math.floor(Math.random() * pool.length);
@@ -377,6 +639,7 @@ function startBatchDraw() {
     if (pool.length === 0) {
       clearInterval(rollTimer);
       rollTimer = null;
+      stopMusic(); // 停止背景音乐
       stopBatchDraw();
       alert('名单已全部抽完！');
       return;
@@ -404,6 +667,8 @@ function stopBatchDraw() {
   }
   startBtn.disabled = false;
   pauseBtn.textContent = '暂停';
+  // 停止背景音乐
+  stopMusic();
 }
 
 function pauseRoll() {
@@ -847,6 +1112,7 @@ function init() {
   
   loadMode();
   loadBackground(); // 加载背景配置
+  loadMusic(); // 加载音乐配置
   updateResultList();
   
   // 初始化名字显示
@@ -983,6 +1249,9 @@ configModal.onclick = function(e) {
 backgroundModal.onclick = function(e) {
   if (e.target === backgroundModal) closeBackgroundModal();
 };
+musicModal.onclick = function(e) {
+  if (e.target === musicModal) closeMusicModal();
+};
 
 // 绑定背景配置按钮事件
 if (backgroundBtn) {
@@ -993,6 +1262,45 @@ if (saveBackgroundBtn) {
 }
 if (closeBackgroundBtn) {
   closeBackgroundBtn.onclick = closeBackgroundModal;
+}
+
+// 绑定音乐配置按钮事件
+if (musicBtn) {
+  musicBtn.onclick = openMusicModal;
+}
+if (musicFileInput) {
+  musicFileInput.addEventListener('change', handleMusicUpload);
+}
+if (deleteMusicBtn) {
+  deleteMusicBtn.onclick = function() {
+    if (confirm('确定要删除当前音乐吗？')) {
+      deleteMusic();
+      currentMusicInfo.style.display = 'none';
+      deleteMusicBtn.style.display = 'none';
+      musicFileInput.value = '';
+      musicPreview.style.display = 'none';
+      alert('音乐已删除！');
+    }
+  };
+}
+if (saveMusicBtn) {
+  saveMusicBtn.onclick = saveMusicConfig;
+}
+if (closeMusicBtn) {
+  closeMusicBtn.onclick = closeMusicModal;
+}
+if (previewMusicBtn) {
+  previewMusicBtn.onclick = function() {
+    if (musicPreview.src) {
+      if (musicPreview.paused) {
+        musicPreview.play();
+        previewMusicBtn.textContent = '暂停';
+      } else {
+        musicPreview.pause();
+        previewMusicBtn.textContent = '试听';
+      }
+    }
+  };
 }
 
 window.onload = init;
